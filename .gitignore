@@ -1,0 +1,39 @@
+# Standard C# and Visual Studio exclusions
+*.rsuser
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+[Dd]ebug/
+[Rr]elease/
+[Bb]in/
+[Oo]bj/
+*.nupkg
+*.snupkg
+appsettings.json
+appsettings.*.json
+*.log
+
+# Copilot-generated files
+*.copilot
+.copilot/
+*.copilot.json
+.copilot.json
+*.copilot-config
+copilot-logs/
+copilot-suggestions/
+copilot-temp/
+
+# Rider and Visual Studio Code IDE exclusions
+.idea/
+.vscode/
+
+# Node.js exclusions (for hybrid projects)
+node_modules/
+dist/
+
+# Miscellaneous
+Thumbs.db
+
+# Ignore Visual Studio working directory
+.vs/
