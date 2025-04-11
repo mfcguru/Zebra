@@ -1,4 +1,4 @@
-﻿using Zebra.Printers;
+﻿using POS.Printers;
 
 namespace WinFormsDemo.Features.Print;
 

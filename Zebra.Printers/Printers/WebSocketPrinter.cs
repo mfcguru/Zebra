@@ -1,7 +1,7 @@
 using System.Net.WebSockets;
 using System.Text;
 
-namespace Zebra.Printers;
+namespace POS.Printers;
 
 public class WebSocketPrinter : IPrinter
 {

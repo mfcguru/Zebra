@@ -1,7 +1,7 @@
-﻿using Microsoft.Extensions.Configuration;
-using Zebra.Printers;
+﻿using Printers;
+using System.Text.Json;
 
-namespace ConsoleDemo;
+namespace PrinterApp;
 
 static class Program
 {
@@ -9,74 +9,57 @@ static class Program
     {
         try
         {
-            var (mode, content) = ParseArgs(args);
-            if (string.IsNullOrEmpty(mode) || string.IsNullOrEmpty(content)) return;
-
-            var configuration = LoadConfiguration();
-            var printerFactory = new PrinterFactory();
-            var printer = CreatePrinterInstance(mode, configuration, printerFactory);
-            if (printer == null) return;
-
-            await PrintContent(printer, content);
+            var (driver, mode, content) = ParseArgs(args);
+            PrinterSettings settings = LoadPrinterSettings();
+            await ExecutePrintingAsync(driver, mode, content, settings);
+        }
+        catch (ArgumentException ex)
+        {
+            Console.WriteLine(ex);
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error while printing: {ex.Message}");
+            Console.WriteLine($"Error: {ex}");
         }
     }
 
-    private static (string? mode, string? content) ParseArgs(string[] args)
+    private static (PrinterDriver driver, PrinterMode mode, string content) ParseArgs(string[] args)
     {
-        if (args.Length < 2)
-        {
-            Console.WriteLine("Usage: <mode> <content>");
-            Console.WriteLine("Modes: 'tcp', 'ws', or 'windows'");
-            Console.WriteLine("Content: ZPL string for the printer");
-            return (null, null);
-        }
+        if (args.Length < 3)
+            throw new ArgumentException("Invalid arguments. Usage: <driver> <mode> <content>");
 
-        string mode = args[0].ToLower();
-        string content = args[1];
-        return (mode, content);
+        if (!Enum.TryParse(args[0], true, out PrinterDriver driver))
+            throw new ArgumentException($"Invalid printer driver: {args[0]}");
+
+        if (!Enum.TryParse(args[1], true, out PrinterMode mode))
+            throw new ArgumentException($"Invalid printer mode: {args[1]}");
+
+        string content = args[2];
+
+        if (content.EndsWith(".txt", StringComparison.OrdinalIgnoreCase) && File.Exists(content))
+            content = File.ReadAllText(content);
+
+        return (driver, mode, content);
     }
 
-    private static IConfiguration LoadConfiguration()
+    private static PrinterSettings LoadPrinterSettings()
     {
-        return new ConfigurationBuilder()
-            .SetBasePath(AppContext.BaseDirectory)
-            .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
-            .Build();
+        const string settingsFile = "appsettings.json";
+        if (!File.Exists(settingsFile))
+            throw new FileNotFoundException($"Configuration file '{settingsFile}' not found.");
+
+        string json = File.ReadAllText(settingsFile);
+        var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+        return JsonSerializer.Deserialize<PrinterSettings>(json, options)
+               ?? throw new InvalidOperationException("Invalid printer settings.");
     }
 
-    private static IPrinter? CreatePrinterInstance(string mode, IConfiguration configuration, PrinterFactory printerFactory)
+    private static async Task ExecutePrintingAsync(PrinterDriver driver, PrinterMode mode, string content, PrinterSettings settings)
     {
-        IPrinter? printer = null;
+        var printerFactory = new PrinterFactory();
+        var printer = printerFactory.CreatePrinterInstance(driver, mode, settings);
 
-        switch (mode)
-        {
-            case "tcp":
-                var tcpConfig = configuration.GetSection("PrinterConfigurations:Tcp");
-                printer = printerFactory.CreatePrinterInstance(Mode.Tcp, tcpConfig["IpAddress"]!, int.Parse(tcpConfig["Port"]!));
-                break;
-            case "ws":
-                var wsConfig = configuration["PrinterConfigurations:WebSocket:Url"];
-                printer = printerFactory.CreatePrinterInstance(Mode.WebSocket, wsConfig!);
-                break;
-            case "windows":
-                var windowsConfig = configuration["PrinterConfigurations:Windows:PrinterName"];
-                printer = printerFactory.CreatePrinterInstance(Mode.Windows, windowsConfig!);
-                break;
-            default:
-                Console.WriteLine("Invalid parameter. Please use 'tcp', 'ws', or 'windows'.");
-                break;
-        }
-
-        return printer;
-    }
-
-    private static async Task PrintContent(IPrinter printer, string content)
-    {
         await printer.Print(content);
-        Console.WriteLine("Print job sent successfully.");
+        Console.WriteLine("Print job completed successfully.");
     }
 }

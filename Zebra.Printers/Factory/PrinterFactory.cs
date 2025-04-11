@@ -1,4 +1,4 @@
-﻿namespace Zebra.Printers;
+﻿namespace POS.Printers;
 
 public sealed class PrinterFactory : IPrinterFactory
 {

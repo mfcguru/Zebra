@@ -1,7 +1,7 @@
 ﻿using System.Net.Sockets;
 using System.Text;
 
-namespace Zebra.Printers;
+namespace POS.Printers;
 
 public class TcpPrinter : IPrinter
 {
